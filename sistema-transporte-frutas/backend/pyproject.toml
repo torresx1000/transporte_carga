@@ -1,0 +1,13 @@
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["app", "tests"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+
+[tool.ruff.lint.per-file-ignores]
+"app/models/__init__.py" = ["F401"]
+"app/models/**/__init__.py" = ["F401"]
+"app/schemas/__init__.py" = ["F401"]
+"app/schemas/**/__init__.py" = ["F401"]
