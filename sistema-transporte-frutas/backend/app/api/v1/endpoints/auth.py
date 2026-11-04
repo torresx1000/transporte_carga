@@ -46,7 +46,11 @@ def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get
         )
     return {
         **create_token_pair(user.id),
-        "user": {"id": user.id, "email": user.email, "role": user.role},
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "role": user.permission_role.slug if user.permission_role else user.role,
+        },
     }
 
 

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.permissions import require_roles
-from app.models.entities import User
+from app.models.entities import Client, User
 from app.repositories.portal import PortalRepository
 from app.services.portal import PortalService
 from app.schemas.responses import (
@@ -25,11 +25,14 @@ def get_portal_service(db: Session = Depends(get_db)) -> PortalService:
 
 
 @router.get("/me", response_model=PortalProfileResponse)
-def portal_profile(user: User = Depends(require_client)):
+def portal_profile(user: User = Depends(require_client), db: Session = Depends(get_db)):
+    client_id = user.data.get("client_id")
+    client = db.get(Client, client_id) if client_id else None
     return {
         "id": user.id,
         "email": user.email,
-        "cliente_id": user.data.get("client_id"),
+        "cliente_id": client_id,
+        "cliente_nombre": client.name if client and client.deleted_at is None else None,
         "nombre": user.data.get("name"),
     }
 

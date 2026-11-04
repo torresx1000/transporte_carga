@@ -19,6 +19,7 @@ from app.api.v1.endpoints import (
     mantenimiento,
     pagos,
     configuracion,
+    roles,
 )
 from app.api.v1.endpoints.usuarios import usuarios
 
@@ -44,5 +45,6 @@ for endpoint_router in (
     mantenimiento.router,
     pagos.router,
     configuracion.router,
+    roles.router,
 ):
     router.include_router(endpoint_router)

@@ -13,6 +13,7 @@ from app.models.mantenimiento import Maintenance
 from app.models.pagos import Payment
 from app.models.retornos import ReturnBalanceCut, ReturnRecord  # noqa: F401 - register cut mapper
 from app.models.retorno_desgloses import ReturnAllocation  # noqa: F401 - register mapper
+from app.models.roles import AccessRole, AccessRoleAudit  # noqa: F401 - register mapper
 from app.models.rutas import Route
 from app.models.usuarios import User
 from app.models.vehiculos import Vehicle

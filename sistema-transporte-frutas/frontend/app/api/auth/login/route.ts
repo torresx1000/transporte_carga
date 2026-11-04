@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 
- const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+
 //const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "https://transporte-carga.onrender.com";
+const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
 export async function POST(request: Request) {
   const body = await request.json() as { email?: string; password?: string };

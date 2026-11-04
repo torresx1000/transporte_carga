@@ -67,6 +67,8 @@ class UsuarioResponse(BaseModel):
     id: str
     email: str
     role: str
+    role_name: str | None = None
+    permission_role_id: str | None = None
     active: bool
     data: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime | None = None
@@ -132,6 +134,7 @@ class PortalProfileResponse(BaseModel):
     id: str
     email: str
     cliente_id: str | None
+    cliente_nombre: str | None = None
     nombre: str | None = None
 
 

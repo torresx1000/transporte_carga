@@ -66,9 +66,11 @@ La restauración tampoco elimina tablas o datos. Verifica `alembic current` y ej
 
 ## Áreas y rutas
 
-Las rutas comienzan en `/api/v1`: `auth`, `usuarios`, `clientes`, `conductores`, `vehiculos`, `rutas`, `cargas`, `viajes`, `cotizaciones`, `retornos`, `documentos`, `gastos`, `combustible`, `mantenimiento`, `pagos` y `configuracion`. Las listas aceptan `page`, `page_size`, `estado`, `cliente_id`, `vehiculo_id`, `conductor_id` y búsqueda `q`. El piloto `/clientes` recibe sus campos directamente según `ClienteCreate` y `ClienteUpdate`; los otros recursos conservan `{ "data": { ...campos del módulo... } }`. Las bajas son lógicas.
+Las rutas comienzan en `/api/v1`: `auth`, `usuarios`, `roles`, `clientes`, `conductores`, `vehiculos`, `rutas`, `cargas`, `viajes`, `cotizaciones`, `retornos`, `documentos`, `gastos`, `combustible`, `mantenimiento`, `pagos` y `configuracion`. Las listas aceptan `page`, `page_size`, `estado`, `cliente_id`, `vehiculo_id`, `conductor_id` y búsqueda `q`. El piloto `/clientes` recibe sus campos directamente según `ClienteCreate` y `ClienteUpdate`; los otros recursos conservan `{ "data": { ...campos del módulo... } }`. Las bajas son lógicas.
 
-Autenticación: `POST /api/v1/auth/login` recibe formulario OAuth2 (`username` es el correo, más `password`) y emite access/refresh JWT. `POST /api/v1/auth/refresh` recibe `{ "refresh_token": "..." }`. El registro público siempre crea rol cliente; el administrador puede crear roles desde `/api/v1/usuarios`.
+Autenticación: `POST /api/v1/auth/login` recibe formulario OAuth2 (`username` es el correo, más `password`) y emite access/refresh JWT. `POST /api/v1/auth/refresh` recibe `{ "refresh_token": "..." }`. El registro público siempre crea rol cliente; la creación de usuarios requiere `usuarios.crear`.
+
+La pantalla Administración → Roles y permisos usa el catálogo dinámico de `GET /api/v1/roles/catalog`; los roles y sus miembros se administran en `/api/v1/roles`. Los permisos se evalúan en cada solicitud y los cambios de asignación o configuración quedan en `/api/v1/roles/audit`. Separa consulta (`roles.ver`), creación, edición, eliminación, gestión de permisos (`permisos.gestionar`) y asignación a usuarios (`usuarios.asignar_roles`). Aplica las migraciones con `alembic upgrade head` antes de usar esta funcionalidad.
 
 El rol cliente solo tiene acceso a `/api/v1/portal/*`; asocia su usuario a un cliente mediante `client_id` al crearlo desde administración. Endpoints especiales: `/retornos/saldos-por-cliente`, `/clientes/{id}/estado-jabas`, `/documentos/por-vencer`, `/reportes/dashboard`, `/reportes/rentabilidad-viaje/{id}`, `/reportes/consumo-combustible` y `/reportes/jabas-pendientes`.
 
@@ -84,7 +86,7 @@ Cada recurso de negocio tiene un paquete propio y archivos con el mismo nombre e
 
 ## Calidad de código
 
-Ejecuta Ruff con `python -m ruff check app`. Las suites de prueba se retiraron por solicitud del proyecto; el último registro antes de retirarlas fue 74 pruebas backend aprobadas.
+Ejecuta Ruff con `python -m ruff check app tests` y las pruebas backend con `python -m pytest`.
 
 ## Nota de esquema
 

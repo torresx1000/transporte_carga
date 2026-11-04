@@ -10,7 +10,8 @@ import { api } from "@/lib/api/client";
 import { getApiError } from "@/lib/api/errors";
 
 type Client={id:string;nombre:string;name?:string};
-type Payment=Record<string,string>&{id?:string;abonos?:{monto_centimos:number;fecha:string;metodo:string;comprobante?:string}[]};
+type PaymentTransaction={monto_centimos:number;fecha:string;metodo:string;comprobante?:string};
+type Payment={id?:string;viaje_id?:string;carga_id?:string;cliente_id?:string;ruta_id?:string;beneficiario?:string;concepto?:string;comprobante?:string;estado?:string;tipo_servicio?:string;sentido?:string;fecha_pago?:string;created_at?:string;metodo?:string;momento_pago:string;observaciones?:string;monto_pagado_centimos?:number|string;monto_acordado_centimos?:number|string;monto_centimos?:number|string;saldo_centimos?:number|string;amount?:number|string;abonos?:PaymentTransaction[]|string};
 type PaymentDocument={id:string;nombre:string;tamano:number;abono_monto_centimos?:number;abono_fecha?:string;comprobante?:string};
 const input=`${control} mt-1`;
 const serviceLabels={flete:"Flete",carga:"Carga",descarga:"Descarga"};
@@ -26,11 +27,11 @@ export default function PaymentsWorkspace({newPage=false}:{newPage?:boolean}){
  const history=useResourceList("pagos",{page:1,page_size:100});const cache=useQueryClient();
  const [tripId,setTripId]=useState(""),[loadId,setLoadId]=useState(""),[kind,setKind]=useState<keyof typeof serviceLabels>("flete"),[direction,setDirection]=useState<"cobro_cliente"|"pago_transportista">("cobro_cliente"),[beneficiaryInput,setBeneficiaryInput]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState(""),[success,setSuccess]=useState(false),[selectedFiles,setSelectedFiles]=useState<File[]>([]),[editing,setEditing]=useState<Payment|null>(null),[editError,setEditError]=useState(""),[query,setQuery]=useState(""),[month,setMonth]=useState(""),[abonoFiles,setAbonoFiles]=useState<File[]>([]);
  const documents=useQuery({queryKey:["pagos","documents",editing?.id],queryFn:async()=>(await api.get<PaymentDocument[]>(`/pagos/${editing!.id}/documentos`)).data,enabled:Boolean(editing?.id)});
- const editingAbonos=useMemo(()=>{const value=editing?.abonos;if(Array.isArray(value))return value;if(typeof value==="string"){try{const parsed:unknown=JSON.parse(value);return Array.isArray(parsed)?parsed as NonNullable<Payment["abonos"]>:[];}catch{return [];}}return [];},[editing]);
+ const editingAbonos=useMemo(()=>{const value=editing?.abonos;if(Array.isArray(value))return value;if(typeof value==="string"){try{const parsed:unknown=JSON.parse(value);return Array.isArray(parsed)?parsed as PaymentTransaction[]:[];}catch{return [];}}return [];},[editing]);
  const trip=trips.data?.find(t=>t.id===tripId);const route=routes.data?.find(r=>r.id===trip?.ruta_id);const driver=drivers.data?.find(d=>d.id===trip?.conductor_id);
  const tripLoads=useMemo(()=>{if(!trip)return [];const ids=new Set([...(trip.cargas_ids||[]),...(trip.etapas||[]).map(s=>s.carga_id)]);return (loads.data||[]).filter(l=>ids.has(l.id));},[trip,loads.data]);
  const load=tripLoads.find(l=>l.id===loadId);const client=clients.data?.find(c=>c.id===load?.cliente_id);
- const payments=useMemo(()=>((history.data?.items||[]) as Payment[]),[history.data]);
+ const payments=useMemo(()=>((history.data?.items||[]) as Record<string,string>[]).map((item):Payment=>{const payment:Payment={...item,momento_pago:item.momento_pago||""};if(payment.viaje_id||!payment.carga_id)return payment;const linkedLoad=loads.data?.find(load=>load.id===payment.carga_id);const linkedTrip=linkedLoad?.etapas?.find(stage=>stage.viaje_id)?.viaje_id;return linkedTrip?{...payment,viaje_id:linkedTrip}:payment;}),[history.data,loads.data]);
  const editId=searchParams.get("editar");
  // Hydrate the editor from the payment list when opening /pagos/nuevo?editar=...
  // eslint-disable-next-line react-hooks/set-state-in-effect

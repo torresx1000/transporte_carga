@@ -8,6 +8,7 @@ import { FileDown } from "lucide-react";
 import { exportLoadPdf } from "@/features/export/record-pdf";
 import { ErrorState, TableSkeleton } from "@/components/ui/AsyncStates";
 import { City, Load, Route, Trip, useCatalog, path, control } from "@/features/transporte/data";
+import LoadPaymentAction from "@/features/cargas/LoadPaymentAction";
 
 type Leg={viaje_id:string;origen_id:number;destino_id:number};
 type Doc={id:string;nombre:string;tipo:string;tamano:number};
@@ -16,7 +17,7 @@ export default function LoadDetail({id}:{id:string}){
  if(query.isLoading)return <TableSkeleton/>;
  if(query.isError)return <ErrorState message={getApiError(query.error)} onRetry={()=>void query.refetch()}/>;
  if(!query.data)return null;
- return <Detail key={JSON.stringify(query.data)} load={query.data}/>;
+ return <><Detail key={JSON.stringify(query.data)} load={query.data}/><LoadPaymentAction load={query.data}/></>;
 }
 function Detail({load}:{load:Load}){
  const cache=useQueryClient();const trips=useCatalog<Trip>("viajes"),routes=useCatalog<Route>("rutas"),cities=useCatalog<City>("ciudades");

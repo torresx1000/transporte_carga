@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Activity, Boxes, BriefcaseBusiness, ChartNoAxesColumn, ChevronLeft, ClipboardList,
-  FileText, Fuel, LayoutDashboard, MapPin, Menu, Plus, Route, Search, Settings,
+  FileText, Fuel, LayoutDashboard, MapPin, Menu, Plus, Route, Search,
   ShieldCheck, Truck, UserRound, Users, Wallet, Wrench, X, Bell,
 } from "lucide-react";
 import { useAuthStore } from "@/lib/auth/authStore";
-import { filterAdminNavigation } from "@/lib/auth/roleAccess";
+import { canAccessAdminPath, canViewModule, hasPermission } from "@/lib/auth/roleAccess";
+import { api } from "@/lib/api/client";
 
 const navigation = [
   { title: "Principal", items: [{ label: "Panel principal", href: "/", icon: LayoutDashboard }] },
@@ -35,7 +37,7 @@ const navigation = [
   ] },
   { title: "Administración", items: [
     { label: "Usuarios", href: "/usuarios", icon: Users },
-    { label: "Configuración", href: "/configuracion", icon: Settings },
+    { label: "Roles y permisos", href: "/roles", icon: ShieldCheck },
   ] },
 ];
 const allNavigation = navigation.flatMap((group) => group.items);
@@ -51,11 +53,26 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const clearSession = useAuthStore((state) => state.clearSession);
-  const visibleNavigation = useMemo(() => navigation.map((group) => ({ ...group, items: filterAdminNavigation(group.items, user?.role) })).filter((group) => group.items.length), [user?.role]);
+  const permissionsQuery = useQuery({
+    queryKey: ["auth", "permissions"],
+    queryFn: async () => (await api.get<{ role: string; permissions: string[] }>("/roles/me")).data,
+    enabled: Boolean(user),
+    refetchInterval: 15_000,
+  });
+  const permissions = useMemo(() => permissionsQuery.data?.permissions ?? [], [permissionsQuery.data?.permissions]);
+  const visibleNavigation = useMemo(() => navigation.map((group) => ({
+    ...group,
+    items: group.items.filter(({ href }) => {
+      const moduleName = href.split("/").filter(Boolean)[0];
+      return moduleName ? canViewModule(permissions, moduleName) : permissions.length > 0;
+    }),
+  })).filter((group) => group.items.length), [permissions]);
   const visibleItems = visibleNavigation.flatMap((group) => group.items);
   const matches = visibleItems.filter((item) => item.label.toLocaleLowerCase("es").includes(search.trim().toLocaleLowerCase("es")));
   const activeHref = [...allNavigation].sort((a, b) => b.href.length - a.href.length).find(({ href }) => href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`))?.href;
   const title = pathname.includes("/nuevo") || pathname.includes("/nueva") ? `${pageTitle[activeHref ?? ""] ?? ""} · Nuevo` : pageTitle[activeHref ?? ""] ?? "Panel administrativo";
+  const accessResolved = permissionsQuery.isSuccess;
+  const hasPageAccess = canAccessAdminPath(pathname, permissions);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -63,6 +80,10 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     });
     return () => window.cancelAnimationFrame(frame);
   }, []);
+
+  useEffect(() => {
+    if (accessResolved && !hasPageAccess) router.replace("/sin-permiso");
+  }, [accessResolved, hasPageAccess, router]);
 
   function toggleCollapsed() {
     const next = !collapsed;
@@ -116,12 +137,12 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           <div className="relative hidden sm:block"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/><input value={search} onChange={(event) => { setSearch(event.target.value); setSearchOpen(true); }} onFocus={() => setSearchOpen(true)} onKeyDown={(event) => { if (event.key === "Enter") goToFirstMatch(); if (event.key === "Escape") setSearchOpen(false); }} placeholder="Buscar módulos…" aria-label="Buscar módulos" className="h-9 w-56 rounded-full border border-slate-200 bg-slate-50 pl-9 pr-3 text-xs outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100 md:w-64"/>
             {searchOpen && search.trim() && <div className="absolute right-0 top-11 z-50 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">{matches.length ? matches.slice(0, 6).map(({ href, label, icon: Icon }) => <Link key={href} href={href} onClick={() => { setSearchOpen(false); setSearch(""); setMobileOpen(false); }} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700"><Icon size={15}/>{label}<span className="ml-auto text-[10px] text-slate-400">Abrir</span></Link>) : <p className="px-3 py-3 text-xs text-slate-500">No hay módulos que coincidan.</p>}</div>}
           </div>
-          {(user?.role === "admin" || user?.role === "operador") && <Link href="/viajes/nuevo" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-3 text-xs font-medium text-white shadow-sm transition hover:bg-blue-700"><Plus size={15}/><span className="hidden md:inline">Nuevo viaje</span><span className="md:hidden">Viaje</span></Link>}
+          {hasPermission(permissions, "viajes.crear") && <Link href="/viajes/nuevo" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-3 text-xs font-medium text-white shadow-sm transition hover:bg-blue-700"><Plus size={15}/><span className="hidden md:inline">Nuevo viaje</span><span className="md:hidden">Viaje</span></Link>}
           <button aria-label="Notificaciones" onClick={() => showNotice("Las notificaciones aún no están conectadas a la API.")} className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-blue-600"><Bell size={17}/></button>
           <button title={`${user?.email ?? "Usuario"} · Cerrar sesión`} aria-label="Cerrar sesión" onClick={() => void logout()} className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-700 text-[11px] font-semibold text-white shadow-sm">{(user?.email?.slice(0, 2) ?? "AD").toUpperCase()}</button>
         </div>
       </header>
-      {children}
+      {!accessResolved ? <div role="status" className="m-6 rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-600">{permissionsQuery.isError ? "No se pudieron verificar los permisos. Recarga para volver a intentar." : "Verificando permisos…"}</div> : hasPageAccess ? children : null}
     </div>
     {notice && <div role="status" className="fixed bottom-5 right-5 z-50 rounded-lg bg-slate-900 px-4 py-3 text-xs text-white shadow-xl">{notice}</div>}
   </div>;

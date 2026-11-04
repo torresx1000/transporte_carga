@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getRoleLandingPath,
-  isOperatorRestrictedPath,
-} from "@/lib/auth/roleAccess";
+import { getRoleLandingPath } from "@/lib/auth/roleAccess";
 
 export function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
@@ -27,6 +24,7 @@ export function proxy(request: NextRequest) {
       "/retornos",
       "/reportes",
       "/usuarios",
+      "/roles",
       "/configuracion",
     ].some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
   const authenticated = request.cookies.get("tf_session")?.value === "1";
@@ -36,27 +34,6 @@ export function proxy(request: NextRequest) {
     login.searchParams.set("next", path);
     return NextResponse.redirect(login);
   }
-  if (role === "chofer" && (isAdmin || isPortal || path === "/login"))
-    return NextResponse.redirect(
-      new URL(getRoleLandingPath(role), request.url),
-    );
-  if (isDriverPending && role !== "chofer")
-    return NextResponse.redirect(
-      new URL(getRoleLandingPath(role), request.url),
-    );
-  if (isAdmin && role === "cliente")
-    return NextResponse.redirect(
-      new URL(getRoleLandingPath(role), request.url),
-    );
-  if (isAdmin && role === "operador" && isOperatorRestrictedPath(path)) {
-    const destination = new URL("/sin-permiso", request.url);
-    destination.searchParams.set("recurso", path);
-    return NextResponse.redirect(destination);
-  }
-  if (isPortal && role !== "cliente")
-    return NextResponse.redirect(
-      new URL(getRoleLandingPath(role), request.url),
-    );
   if (isForbidden && role === "admin")
     return NextResponse.redirect(new URL("/", request.url));
   if (path === "/login" && authenticated)
@@ -87,6 +64,7 @@ export const config = {
     "/retornos/:path*",
     "/reportes/:path*",
     "/usuarios/:path*",
+    "/roles/:path*",
     "/configuracion/:path*",
     "/cliente/:path*",
   ],

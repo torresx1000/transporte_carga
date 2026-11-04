@@ -6,12 +6,28 @@ export function getRoleLandingPath(role: Role | undefined): string {
   return "/";
 }
 
-export function filterAdminNavigation<T extends { href: string }>(items: readonly T[], role: Role | undefined): T[] {
-  if (role === "admin") return [...items];
-  if (role === "operador") return items.filter(({ href }) => href !== "/usuarios" && href !== "/configuracion");
-  return [];
+export function hasPermission(permissions: readonly string[], permission: string): boolean {
+  return permissions.includes("*") || permissions.includes(permission);
 }
 
-export function isOperatorRestrictedPath(path: string): boolean {
-  return ["/usuarios", "/configuracion"].some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+export function canViewModule(
+  permissions: readonly string[],
+  module: string,
+): boolean {
+  if (module === "roles") {
+    return ["roles.ver", "roles.crear", "permisos.gestionar"].some((permission) =>
+      hasPermission(permissions, permission),
+    );
+  }
+  return hasPermission(permissions, `${module}.ver`);
+}
+
+export function canAccessAdminPath(
+  path: string,
+  permissions: readonly string[],
+): boolean {
+  if (path === "/") return permissions.length > 0;
+  const moduleName = path.split("/").filter(Boolean)[0];
+  if (!moduleName) return permissions.length > 0;
+  return canViewModule(permissions, moduleName);
 }

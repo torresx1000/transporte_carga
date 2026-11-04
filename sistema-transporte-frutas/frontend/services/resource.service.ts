@@ -50,9 +50,10 @@ function unwrap(
       item == null ? "" : resource === "rutas" && key === "paradas" ? JSON.stringify(item) : String(item),
     ]),
   ) as ResourceRecord;
-  if (resource === "usuarios" && "active" in result)
-    flat.status = result.active ? "Activo" : "Inactivo";
-  if (resourceRole(flat.role)) flat.role = resourceRole(flat.role);
+  if (resource === "usuarios") {
+    if ("active" in result) flat.status = result.active ? "Activo" : "Suspendido";
+    flat.role_label = String(result.role_name ?? resourceRole(flat.role));
+  }
   return flat;
 }
 
